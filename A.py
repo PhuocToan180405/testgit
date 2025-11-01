@@ -319,3 +319,5 @@ class MinimaxTicTacToe:
 if __name__ == "__main__":
     game = MinimaxTicTacToe()
     game.run()
+
+du lich
