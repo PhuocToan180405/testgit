@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sơ đồ cây thuật toán đổi tiền</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.2em;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+        
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid #333;
+        }
+        
+        .use-coin { background: #4CAF50; }
+        .skip-coin { background: #2196F3; }
+        .base-case { background: #FF9800; }
+        .invalid { background: #F44336; }
+        .memoized { background: #9C27B0; }
+        
+        .tree-container {
+            overflow-x: auto;
+            padding: 20px 0;
+        }
+        
+        .tree {
+            min-width: 1000px;
+            position: relative;
+        }
+        
+        .node {
+            position: absolute;
+            width: 120px;
+            height: 80px;
+            border: 3px solid #333;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .node:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+        
+        .node-label {
+            font-size: 10px;
+            margin-top: 2px;
+            opacity: 0.8;
+        }
+        
+        .result {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            margin-top: 4px;
+        }
+        
+        .line {
+            position: absolute;
+            background: #333;
+            z-index: -1;
+        }
+        
+        .line-label {
+            position: absolute;
+            background: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: bold;
+            z-index: 1;
+            border: 1px solid #ccc;
+        }
+        
+        .use-label { color: #4CAF50; }
+        .skip-label { color: #2196F3; }
+        
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            margin: 0 10px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #0056b3;
+            transform: translateY(-1px);
+        }
+        
+        .explanation {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border-left: 4px solid #007bff;
+        }
+        
+        .step-info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Sơ đồ cây thuật toán đổi tiền</h1>
+        <div class="subtitle">n = 5, coins = {1, 2, 3}</div>
+        
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color use-coin"></div>
+                <span>Sử dụng đồng xu</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color skip-coin"></div>
+                <span>Bỏ qua đồng xu</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color base-case"></div>
+                <span>Trường hợp cơ sở</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color invalid"></div>
+                <span>Không hợp lệ</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color memoized"></div>
+                <span>Đã tính (memoized)</span>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button class="btn btn-primary" onclick="showStep(0)">Reset</button>
+            <button class="btn btn-primary" onclick="showStep(currentStep + 1)">Bước tiếp theo</button>
+            <button class="btn btn-primary" onclick="showAll()">Hiển thị tất cả</button>
+        </div>
+        
+        <div class="step-info" id="stepInfo">
+            Bắt đầu với ways(5, 0) - tìm số cách đổi 5 đơn vị tiền bắt đầu từ đồng xu đầu tiên (1)
+        </div>
+        
+        <div class="tree-container">
+            <div class="tree" id="tree" style="height: 800px;">
+                <!-- Root node -->
+                <div class="node use-coin" style="left: 500px; top: 20px;" id="node-5-0">
+                    <div>ways(5,0)</div>
+                    <div class="node-label">coin=1</div>
+                    <div class="result">5</div>
+                </div>
+                
+                <!-- Level 1 -->
+                <div class="node use-coin" style="left: 250px; top: 120px;" id="node-4-0">
+                    <div>ways(4,0)</div>
+                    <div class="node-label">dùng 1</div>
+                    <div class="result">4</div>
+                </div>
+                
+                <div class="node skip-coin" style="left: 750px; top: 120px;" id="node-5-1">
+                    <div>ways(5,1)</div>
+                    <div class="node-label">bỏ 1, coin=2</div>
+                    <div class="result">1</div>
+                </div>
+                
+                <!-- Level 2 - Left branch -->
+                <div class="node use-coin" style="left: 100px; top: 220px;" id="node-3-0">
+                    <div>ways(3,0)</div>
+                    <div class="node-label">dùng 1</div>
+                    <div class="result">3</div>
+                </div>
+                
+                <div class="node skip-coin" style="left: 400px; top: 220px;" id="node-4-1">
+                    <div>ways(4,1)</div>
+                    <div class="node-label">bỏ 1, coin=2</div>
+                    <div class="result">1</div>
+                </div>
+                
+                <!-- Level 2 - Right branch -->
+                <div class="node use-coin" style="left: 650px; top: 220px;" id="node-3-1">
+                    <div>ways(3,1)</div>
+                    <div class="node-label">dùng 2</div>
+                    <div class="result">1</div>
+                </div>
+                
+                <div class="node skip-coin" style="left: 850px; top: 220px;" id="node-5-2">
+                    <div>ways(5,2)</div>
+                    <div class="node-label">bỏ 2, coin=3</div>
+                    <div class="result">0</div>
+                </div>
+                
+                <!-- Level 3 - ways(3,0) branches -->
+                <div class="node use-coin" style="left: 50px; top: 320px;" id="node-2-0">
+                    <div>ways(2,0)</div>
+                    <div class="node-label">dùng 1</div>
+                    <div class="result">2</div>
+                </div>
+                
+                <div class="node memoized" style="left: 150px; top: 320px;" id="node-3-1-memo">
+                    <div>ways(3,1)</div>
+                    <div class="node-label">memo</div>
+                    <div class="result">1</div>
+                </div>
+                
+                <!-- Level 3 - ways(4,1) branches -->
+                <div class="node use-coin" style="left: 350px; top: 320px;" id="node-2-1">
+                    <div>ways(2,1)</div>
+                    <div class="node-label">dùng 2</div>
+                    <div class="result">1</div>
+                </div>
+                
+                <div class="node skip-coin" style="left: 450px; top: 320px;" id="node-4-2">
+                    <div>ways(4,2)</div>
+                    <div class="node-label">bỏ 2, coin=3</div>
+                    <div class="result">0</div>
+                </div>
+                
+                <!-- Level 3 - ways(3,1) branches -->
+                <div class="node use-coin" style="left: 600px; top: 320px;" id="node-1-1">
+                    <div>ways(1,1)</div>
+                    <div class="node-label">dùng 2</div>
+                    <div class="result">0</div>
+                </div>
+                
+                <div class="node skip-coin" style="left: 700px; top: 320px;" id="node-3-2">
+                    <div>ways(3,2)</div>
+                    <div class="node-label">bỏ 2, coin=3</div>
+                    <div class="result">1</div>
+                </div>
+                
+                <!-- Base cases and further expansions -->
+                <div class="node base-case" style="left: 25px; top: 420px;" id="node-1-0">
+                    <div>ways(1,0)</div>
+                    <div class="node-label">dùng 1</div>
+                    <div class="result">1</div>
+                </div>
+                
+                <div class="node skip-coin" style="left: 75px; top: 420px;" id="node-2-1-2">
+                    <div>ways(2,1)</div>
+                    <div class="node-label">memo</div>
+                    <div class="result">1</div>
+                </div>
+                
+                <div class="node base-case" style="left: 325px; top: 420px;" id="node-0-1">
+                    <div>ways(0,1)</div>
+                    <div class="node-label">cơ sở</div>
+                    <div class="result">1</div>
+                </div>
+                
+                <div class="node skip-coin" style="left: 375px; top: 420px;" id="node-2-2">
+                    <div>ways(2,2)</div>
+                    <div class="node-label">bỏ 2, coin=3</div>
+                    <div class="result">0</div>
+                </div>
+                
+                <div class="node invalid" style="left: 575px; top: 420px;" id="node-neg1-1">
+                    <div>ways(-1,1)</div>
+                    <div class="node-label">không hợp lệ</div>
+                    <div class="result">0</div>
+                </div>
+                
+                <div class="node skip-coin" style="left: 625px; top: 420px;" id="node-1-2">
+                    <div>ways(1,2)</div>
+                    <div class="node-label">bỏ 2, coin=3</div>
+                    <div class="result">0</div>
+                </div>
+                
+                <div class="node use-coin" style="left: 675px; top: 420px;" id="node-0-2">
+                    <div>ways(0,2)</div>
+                    <div class="node-label">dùng 3</div>
+                    <div class="result">1</div>
+                </div>
+                
+                <div class="node skip-coin" style="left: 725px; top: 420px;" id="node-3-3">
+                    <div>ways(3,3)</div>
+                    <div class="node-label">bỏ 3</div>
+                    <div class="result">0</div>
+                </div>
+                
+                <!-- Final level base cases -->
+                <div class="node base-case" style="left: 0px; top: 520px;" id="node-0-0">
+                    <div>ways(0,0)</div>
+                    <div class="node-label">cơ sở</div>
+                    <div class="result">1</div>
+                </div>
+                
+                <div class="node skip-coin" style="left: 50px; top: 520px;" id="node-1-1-2">
+                    <div>ways(1,1)</div>
+                    <div class="node-label">memo</div>
+                    <div class="result">0</div>
+                </div>
+                
+                <!-- Connection lines -->
+                <div class="line" style="left: 560px; top: 100px; width: 2px; height: 20px;"></div>
+                <div class="line" style="left: 310px; top: 100px; width: 2px; height: 20px;"></div>
+                <div class="line" style="left: 810px; top: 100px; width: 2px; height: 20px;"></div>
+                
+                <div class="line" style="left: 310px; top: 100px; width: 250px; height: 2px;"></div>
+                <div class="line" style="left: 560px; top: 100px; width: 250px; height: 2px;"></div>
+                
+                <!-- Line labels -->
+                <div class="line-label use-label" style="left: 380px; top: 90px;">Dùng 1</div>
+                <div class="line-label skip-label" style="left: 650px; top: 90px;">Bỏ 1</div>
+            </div>
+        </div>
+        
+        <div class="explanation">
+            <h3>Giải thích thuật toán:</h3>
+            <p><strong>Công thức đệ quy:</strong> ways(amount, index) = ways(amount - coins[index], index) + ways(amount, index + 1)</p>
+            <ul>
+                <li><strong>Nhánh trái:</strong> Sử dụng đồng xu hiện tại (có thể dùng lại)</li>
+                <li><strong>Nhánh phải:</strong> Bỏ qua đồng xu hiện tại, chuyển sang đồng xu tiếp theo</li>
+                <li><strong>Trường hợp cơ sở:</strong> amount = 0 → return 1 (có 1 cách)</li>
+                <li><strong>Trường hợp không hợp lệ:</strong> amount < 0 hoặc index >= m → return 0</li>
+            </ul>
+            <p><strong>Kết quả:</strong> Có <strong>5 cách</strong> để đổi 5 đơn vị tiền với các đồng xu {1, 2, 3}:</p>
+            <ol>
+                <li>5 = 1 + 1 + 1 + 1 + 1</li>
+                <li>5 = 1 + 1 + 1 + 2</li>
+                <li>5 = 1 + 2 + 2</li>
+                <li>5 = 2 + 3</li>
+                <li>5 = 1 + 1 + 3</li>
+            </ol>
+        </div>
+    </div>
+    
+    <script>
+        let currentStep = 0;
+        const maxSteps = 10;
+        
+        const steps = [
+            {
+                nodes: ['node-5-0'],
+                info: 'Bắt đầu với ways(5, 0) - tìm số cách đổi 5 đơn vị tiền bắt đầu từ đồng xu 1'
+            },
+            {
+                nodes: ['node-5-0', 'node-4-0', 'node-5-1'],
+                info: 'ways(5,0) = ways(4,0) + ways(5,1). Chia thành 2 nhánh: dùng đồng 1 và bỏ qua đồng 1'
+            },
+            {
+                nodes: ['node-5-0', 'node-4-0', 'node-5-1', 'node-3-0', 'node-4-1'],
+                info: 'Tiếp tục phân chia ways(4,0) = ways(3,0) + ways(4,1)'
+            },
+            {
+                nodes: ['node-5-0', 'node-4-0', 'node-5-1', 'node-3-0', 'node-4-1', 'node-3-1', 'node-5-2'],
+                info: 'Phân chia ways(5,1) = ways(3,1) + ways(5,2)'
+            },
+            {
+                nodes: ['node-5-0', 'node-4-0', 'node-5-1', 'node-3-0', 'node-4-1', 'node-3-1', 'node-5-2', 'node-2-0', 'node-3-1-memo'],
+                info: 'ways(3,0) = ways(2,0) + ways(3,1). Chú ý ways(3,1) đã được tính rồi (memoization)'
+            },
+            {
+                nodes: ['node-5-0', 'node-4-0', 'node-5-1', 'node-3-0', 'node-4-1', 'node-3-1', 'node-5-2', 'node-2-0', 'node-3-1-memo', 'node-2-1', 'node-4-2'],
+                info: 'ways(4,1) = ways(2,1) + ways(4,2)'
+            },
+            {
+                nodes: ['node-5-0', 'node-4-0', 'node-5-1', 'node-3-0', 'node-4-1', 'node-3-1', 'node-5-2', 'node-2-0', 'node-3-1-memo', 'node-2-1', 'node-4-2', 'node-1-1', 'node-3-2'],
+                info: 'ways(3,1) = ways(1,1) + ways(3,2)'
+            },
+            {
+                nodes: ['node-5-0', 'node-4-0', 'node-5-1', 'node-3-0', 'node-4-1', 'node-3-1', 'node-5-2', 'node-2-0', 'node-3-1-memo', 'node-2-1', 'node-4-2', 'node-1-1', 'node-3-2', 'node-1-0', 'node-2-1-2'],
+                info: 'Tiếp tục phân chia cho đến khi gặp các trường hợp cơ sở'
+            },
+            {
+                nodes: ['node-5-0', 'node-4-0', 'node-5-1', 'node-3-0', 'node-4-1', 'node-3-1', 'node-5-2', 'node-2-0', 'node-3-1-memo', 'node-2-1', 'node-4-2', 'node-1-1', 'node-3-2', 'node-1-0', 'node-2-1-2', 'node-0-1', 'node-2-2', 'node-neg1-1', 'node-1-2', 'node-0-2', 'node-3-3'],
+                info: 'Mở rộng thêm các nhánh con, gặp trường hợp cơ sở ways(0,1) = 1 và trường hợp không hợp lệ ways(-1,1) = 0'
+            },
+            {
+                nodes: ['node-5-0', 'node-4-0', 'node-5-1', 'node-3-0', 'node-4-1', 'node-3-1', 'node-5-2', 'node-2-0', 'node-3-1-memo', 'node-2-1', 'node-4-2', 'node-1-1', 'node-3-2', 'node-1-0', 'node-2-1-2', 'node-0-1', 'node-2-2', 'node-neg1-1', 'node-1-2', 'node-0-2', 'node-3-3', 'node-0-0', 'node-1-1-2'],
+                info: 'Hoàn thành cây đệ quy. Kết quả cuối cùng: ways(5,0) = 5 cách đổi tiền'
+            }
+        ];
+        
+        function showStep(step) {
+            if (step < 0) step = 0;
+            if (step >= steps.length) step = steps.length - 1;
+            
+            currentStep = step;
+            
+            // Hide all nodes first
+            const allNodes = document.querySelectorAll('.node');
+            allNodes.forEach(node => {
+                node.style.opacity = '0.2';
+                node.style.transform = 'scale(0.8)';
+            });
+            
+            // Show nodes for current step
+            if (steps[step]) {
+                steps[step].nodes.forEach(nodeId => {
+                    const node = document.getElementById(nodeId);
+                    if (node) {
+                        node.style.opacity = '1';
+                        node.style.transform = 'scale(1)';
+                    }
+                });
+                
+                document.getElementById('stepInfo').textContent = steps[step].info;
+            }
+        }
+        
+        function showAll() {
+            const allNodes = document.querySelectorAll('.node');
+            allNodes.forEach(node => {
+                node.style.opacity = '1';
+                node.style.transform = 'scale(1)';
+            });
+            document.getElementById('stepInfo').textContent = 'Hiển thị toàn bộ cây đệ quy';
+        }
+        
+        // Initialize with first step
+        showStep(0);
+        
+        // Add click handlers to nodes
+        document.querySelectorAll('.node').forEach(node => {
+            node.addEventListener('click', function() {
+                const nodeText = this.querySelector('div').textContent;
+                alert('Chi tiết: ' + nodeText + '\n' + 
+                      'Loại: ' + this.classList[1] + '\n' +
+                      'Kết quả: ' + this.querySelector('.result').textContent);
+            });
+        });
+    </script>
+</body>
+</html>
